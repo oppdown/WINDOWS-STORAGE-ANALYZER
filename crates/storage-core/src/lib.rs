@@ -17,6 +17,7 @@ pub struct ScanNode {
     pub allocated_bytes: u64,
     pub child_count: u64,
     pub errors: Vec<String>,
+    pub children: Vec<ScanNode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -107,6 +108,7 @@ fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
         allocated_bytes: 0,
         child_count: 0,
         errors: Vec::new(),
+        children: Vec::new(),
     };
 
     let entries = match fs::read_dir(path) {
@@ -126,12 +128,23 @@ fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
                 let child = visit_directory(&entry_path, counters);
                 node.logical_bytes = node.logical_bytes.saturating_add(child.logical_bytes);
                 node.allocated_bytes = node.allocated_bytes.saturating_add(child.allocated_bytes);
-                node.errors.extend(child.errors);
+                node.errors.extend(child.errors.clone());
+                node.children.push(child);
             }
             Ok(metadata) => {
                 counters.files += 1;
                 node.logical_bytes = node.logical_bytes.saturating_add(metadata.len());
                 node.allocated_bytes = node.allocated_bytes.saturating_add(metadata.len());
+                node.children.push(ScanNode {
+                    name: display_name(&entry_path),
+                    path: entry_path,
+                    kind: NodeKind::File,
+                    logical_bytes: metadata.len(),
+                    allocated_bytes: metadata.len(),
+                    child_count: 0,
+                    errors: Vec::new(),
+                    children: Vec::new(),
+                });
             }
             Err(error) => {
                 counters.errors += 1;
@@ -140,6 +153,12 @@ fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
             }
         }
     }
+    node.children.sort_by(|left, right| {
+        right
+            .logical_bytes
+            .cmp(&left.logical_bytes)
+            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+    });
     node
 }
 
@@ -174,6 +193,9 @@ mod tests {
         assert_eq!(result.root.logical_bytes, 12);
         assert_eq!(result.errors, 0);
         assert_eq!(result.root.child_count, 2);
+        assert_eq!(result.root.children[0].name, "nested");
+        assert_eq!(result.root.children[0].logical_bytes, 7);
+        assert_eq!(result.root.children[1].name, "one.txt");
         remove_dir_all(root).unwrap();
     }
 
