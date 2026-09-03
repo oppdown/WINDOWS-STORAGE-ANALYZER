@@ -62,7 +62,7 @@ function App() {
     <main className="shell">
       <header className="topbar">
         <div><span className="eyebrow">WINDOWS-FIRST STORAGE WORKSTATION</span><h1>Storage Analyzer</h1></div>
-        <span className="badge">PRE-ALPHA 0.1.2</span>
+        <span className="badge">PRE-ALPHA 0.1.3</span>
       </header>
       <section className="hero">
         <div><p className="eyebrow">LOCAL-FIRST • EXPLAINABLE • SAFE</p><h2>See what is using your space.</h2><p className="muted">Scan, understand, compare, and clean up storage with every total traceable to a file or folder.</p></div>

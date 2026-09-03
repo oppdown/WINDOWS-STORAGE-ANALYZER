@@ -2,6 +2,14 @@
 
 All notable changes to WINDOWS STORAGE ANALYZER are documented here.
 
+## [0.1.3] - 2026-09-03
+
+### Added
+
+- Windows NSIS bundling configuration for the native Tauri application.
+- Release workflow support for publishing the Windows installer alongside the source archive.
+- Original application icon wired into the Windows resource and installer build.
+
 ## [0.1.2] - 2026-09-03
 
 ### Added
