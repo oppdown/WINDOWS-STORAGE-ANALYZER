@@ -48,7 +48,9 @@ impl std::fmt::Display for ScanError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RootMissing(path) => write!(f, "scan root does not exist: {}", path.display()),
-            Self::RootNotDirectory(path) => write!(f, "scan root is not a directory: {}", path.display()),
+            Self::RootNotDirectory(path) => {
+                write!(f, "scan root is not a directory: {}", path.display())
+            }
             Self::Io(error) => write!(f, "filesystem error: {error}"),
         }
     }
@@ -57,15 +59,23 @@ impl std::fmt::Display for ScanError {
 impl std::error::Error for ScanError {}
 
 impl From<io::Error> for ScanError {
-    fn from(error: io::Error) -> Self { Self::Io(error) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
 }
 
 pub fn scan_directory(root: impl AsRef<Path>) -> Result<ScanResult, ScanError> {
     let root = root.as_ref().to_path_buf();
     let metadata = fs::metadata(&root).map_err(|error| {
-        if error.kind() == io::ErrorKind::NotFound { ScanError::RootMissing(root.clone()) } else { ScanError::Io(error) }
+        if error.kind() == io::ErrorKind::NotFound {
+            ScanError::RootMissing(root.clone())
+        } else {
+            ScanError::Io(error)
+        }
     })?;
-    if !metadata.is_dir() { return Err(ScanError::RootNotDirectory(root)); }
+    if !metadata.is_dir() {
+        return Err(ScanError::RootNotDirectory(root));
+    }
 
     let started = now_seconds();
     let mut counters = Counters::default();
@@ -81,7 +91,11 @@ pub fn scan_directory(root: impl AsRef<Path>) -> Result<ScanResult, ScanError> {
 }
 
 #[derive(Default)]
-struct Counters { files: u64, directories: u64, errors: u64 }
+struct Counters {
+    files: u64,
+    directories: u64,
+    errors: u64,
+}
 
 fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
     counters.directories += 1;
@@ -121,7 +135,8 @@ fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
             }
             Err(error) => {
                 counters.errors += 1;
-                node.errors.push(format!("{}: {error}", entry_path.display()));
+                node.errors
+                    .push(format!("{}: {error}", entry_path.display()));
             }
         }
     }
@@ -129,11 +144,15 @@ fn visit_directory(path: &Path, counters: &mut Counters) -> ScanNode {
 }
 
 fn display_name(path: &Path) -> String {
-    path.file_name().and_then(|name| name.to_str()).map_or_else(|| path.display().to_string(), str::to_owned)
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map_or_else(|| path.display().to_string(), str::to_owned)
 }
 
 fn now_seconds() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |duration| duration.as_secs())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_secs())
 }
 
 #[cfg(test)]
@@ -161,6 +180,9 @@ mod tests {
     #[test]
     fn missing_root_is_explicit() {
         let path = std::env::temp_dir().join("wsa-no-such-root");
-        assert!(matches!(scan_directory(path), Err(ScanError::RootMissing(_))));
+        assert!(matches!(
+            scan_directory(path),
+            Err(ScanError::RootMissing(_))
+        ));
     }
 }
