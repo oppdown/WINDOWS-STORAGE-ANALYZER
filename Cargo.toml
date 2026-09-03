@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["crates/storage-core"]
+members = ["crates/storage-core", "apps/desktop/src-tauri"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 authors = ["oppdown"]

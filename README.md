@@ -6,7 +6,7 @@ This project is an original implementation inspired by the functional categories
 
 ## Status
 
-Early development. The first foundation contains a buildable Rust filesystem scanner, a React/Tauri-ready desktop shell, regression tests, documentation, and release automation. Production NTFS/MFT acceleration, duplicate hashing, reports, Windows Explorer integration, remote sources, and signed installers are staged milestones.
+Early development. The current foundation contains a buildable Rust filesystem scanner, a Tauri command bridge, a React desktop shell, regression tests, documentation, and release automation. Production NTFS/MFT acceleration, duplicate hashing, reports, Windows Explorer integration, remote sources, and signed installers are staged milestones.
 
 ## Planned capabilities
 
@@ -31,12 +31,12 @@ npm install
 npm run dev
 ```
 
-The scanner prints a JSON summary for the selected root. The desktop shell currently runs as a safe preview; Tauri commands will connect it to the Rust scanner in the next milestone.
+The scanner prints a JSON summary for the selected root. In the Windows desktop shell, the path field now calls the native `scan_directory` command and renders the returned tree summary. The browser build remains a safe preview because browsers cannot scan arbitrary local paths.
 
 ## Repository map
 
 ```text
-apps/desktop/       React/Tauri-ready Windows interface
+apps/desktop/       React/Tauri Windows interface and native bridge
 crates/storage-core Rust scan model, traversal, and future Windows adapters
 docs/               GitHub Pages documentation and release notes
 tests/              Cross-platform contract checks

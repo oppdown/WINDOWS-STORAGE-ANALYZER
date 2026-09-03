@@ -27,3 +27,28 @@ export function summarizeFiles(files) {
     largestFiles,
   };
 }
+
+export function summarizeRustScan(scan) {
+  const root = scan.root;
+  const files = [];
+
+  function collectFileNodes(node) {
+    if (node.kind === 'file') {
+      files.push({ name: node.path, bytes: node.logicalBytes });
+      return;
+    }
+    for (const child of node.children ?? []) collectFileNodes(child);
+  }
+
+  collectFileNodes(root);
+  files.sort((left, right) => right.bytes - left.bytes || left.name.localeCompare(right.name));
+
+  return {
+    files: scan.files,
+    bytes: root.logicalBytes,
+    folders: (root.children ?? [])
+      .filter((child) => child.kind === 'directory')
+      .map((child) => [child.name, child.logicalBytes]),
+    largestFiles: files.slice(0, 8),
+  };
+}

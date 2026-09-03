@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { summarizeFiles, formatBytes } from '../apps/desktop/src/scanPreview.js';
+import { summarizeFiles, summarizeRustScan, formatBytes } from '../apps/desktop/src/scanPreview.js';
 
 const source = await readFile(new URL('../apps/desktop/src/main.jsx', import.meta.url), 'utf8');
 
@@ -20,6 +20,7 @@ test('desktop shell exposes a real folder selection path for local preview scans
   assert.match(source, /webkitdirectory/);
   assert.match(source, /summarizeFiles/);
   assert.match(source, /Local preview scan complete/);
+  assert.match(source, /invoke\('scan_directory'/);
 });
 
 test('preview summary totals files and sorts folders and largest files', () => {
@@ -33,4 +34,23 @@ test('preview summary totals files and sorts folders and largest files', () => {
   assert.deepEqual(result.folders, [['Demo', 5010], ['Other', 100]]);
   assert.equal(result.largestFiles[0].name, 'Demo/large.bin');
   assert.equal(formatBytes(1024), '1.00 KB');
+});
+
+test('native scan summary preserves root totals and ranks nested files', () => {
+  const result = summarizeRustScan({
+    files: 2,
+    root: {
+      logicalBytes: 12,
+      children: [
+        { kind: 'directory', name: 'nested', logicalBytes: 7, children: [
+          { kind: 'file', path: 'nested/two.bin', logicalBytes: 7, children: [] },
+        ] },
+        { kind: 'file', path: 'one.txt', logicalBytes: 5, children: [] },
+      ],
+    },
+  });
+  assert.equal(result.files, 2);
+  assert.equal(result.bytes, 12);
+  assert.deepEqual(result.folders, [['nested', 7]]);
+  assert.equal(result.largestFiles[0].name, 'nested/two.bin');
 });

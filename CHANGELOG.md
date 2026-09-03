@@ -2,6 +2,15 @@
 
 All notable changes to WINDOWS STORAGE ANALYZER are documented here.
 
+## [0.1.2] - 2026-09-03
+
+### Added
+
+- Native Tauri command bridge from the Windows desktop shell to the Rust scanner.
+- Native path scanning with deterministic folder totals and nested largest-file results.
+- Frontend regression coverage for the native scan summary contract.
+- Explicit preview fallback messaging when the browser site is used instead of the Windows desktop build.
+
 ## [0.1.1] - 2026-09-03
 
 ### Added
