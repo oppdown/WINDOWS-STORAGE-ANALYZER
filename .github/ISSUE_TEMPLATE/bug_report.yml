@@ -1,0 +1,17 @@
+name: Bug report
+description: Report a reproducible problem
+title: "bug: "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include expected and actual behavior without private file paths.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+    validations:
+      required: true

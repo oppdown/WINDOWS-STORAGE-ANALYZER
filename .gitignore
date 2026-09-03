@@ -1,0 +1,10 @@
+/target/
+**/node_modules/
+**/dist/
+*.local
+.env
+.idea/
+.vscode/
+*.pdb
+*.msi
+*.exe
