@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import './styles.css';
-import { formatBytes, summarizeFiles, summarizeRustScan } from './scanPreview.js';
+import { formatBytes, normalizeWindowsPath, summarizeFilesAsync, summarizeRustScan } from './scanPreview.js';
 
 const profiles = [
   ['local', 'Local drive or folder', 'Fast local scan with safe recursive fallback'],
@@ -17,6 +17,7 @@ function App() {
   const [status, setStatus] = useState('Ready for a scan');
   const [result, setResult] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   function selectFolder(event) {
     const files = Array.from(event.target.files ?? []);
@@ -30,31 +31,48 @@ function App() {
 
   async function prepareScan(event) {
     event.preventDefault();
-    if (selectedFiles.length > 0) {
-      const scanned = summarizeFiles(selectedFiles);
-      setResult({ path: path.trim(), profile, ...scanned });
-      setStatus(`Local preview scan complete: ${scanned.files.toLocaleString()} files.`);
-      return;
-    }
-    if (!path.trim()) {
+    const target = normalizeWindowsPath(path);
+    if (!target) {
       setStatus('Choose a folder or enter a Windows path first.');
       return;
     }
-    if (!window.__TAURI_INTERNALS__) {
-      setStatus(`Native scan prepared for ${path.trim()}; open the Windows desktop build to scan this path.`);
-      setResult({ path: path.trim(), profile, files: null, bytes: null, folders: [], largestFiles: [] });
+
+    if (!window.__TAURI_INTERNALS__ && selectedFiles.length > 0) {
+      setIsScanning(true);
+      setStatus(`Preparing local preview: 0 of ${selectedFiles.length.toLocaleString()} files...`);
+      try {
+        const scanned = await summarizeFilesAsync(selectedFiles, (processed, total) => {
+          setStatus(`Preparing local preview: ${processed.toLocaleString()} of ${total.toLocaleString()} files...`);
+        });
+        setResult({ path: target, profile, ...scanned });
+        setStatus(`Local preview scan complete: ${scanned.files.toLocaleString()} files.`);
+      } catch (error) {
+        setResult(null);
+        setStatus(`Local preview failed: ${String(error)}`);
+      } finally {
+        setIsScanning(false);
+      }
       return;
     }
 
-    setStatus(`Scanning ${path.trim()}...`);
+    if (!window.__TAURI_INTERNALS__) {
+      setStatus(`Native scan prepared for ${target}; open the Windows desktop build to scan this path.`);
+      setResult({ path: target, profile, files: null, bytes: null, folders: [], largestFiles: [] });
+      return;
+    }
+
+    setIsScanning(true);
+    setStatus(`Scanning ${target}... Large drives can take several minutes.`);
     try {
-      const scan = await invoke('scan_directory', { root: path.trim() });
+      const scan = await invoke('scan_directory', { root: target });
       const scanned = summarizeRustScan(scan);
-      setResult({ path: path.trim(), profile, ...scanned });
+      setResult({ path: target, profile, ...scanned });
       setStatus(`Native scan complete: ${scanned.files.toLocaleString()} files.`);
     } catch (error) {
       setResult(null);
       setStatus(`Native scan failed: ${String(error)}`);
+    } finally {
+      setIsScanning(false);
     }
   }
 
@@ -62,7 +80,7 @@ function App() {
     <main className="shell">
       <header className="topbar">
         <div><span className="eyebrow">WINDOWS-FIRST STORAGE WORKSTATION</span><h1>Storage Analyzer</h1></div>
-        <span className="badge">PRE-ALPHA 0.1.3</span>
+        <span className="badge">PRE-ALPHA 0.1.4</span>
       </header>
       <section className="hero">
         <div><p className="eyebrow">LOCAL-FIRST • EXPLAINABLE • SAFE</p><h2>See what is using your space.</h2><p className="muted">Scan, understand, compare, and clean up storage with every total traceable to a file or folder.</p></div>
@@ -74,7 +92,7 @@ function App() {
           {profiles.map(([id, title, description]) => <label className={`radio-card ${profile === id ? 'selected' : ''}`} key={id}><input type="radio" name="profile" value={id} checked={profile === id} onChange={(event) => setProfile(event.target.value)} /><span><strong>{title}</strong><small>{description}</small></span></label>)}
         </div>
         <label className="path-label" htmlFor="path">Folder or drive path</label>
-        <div className="path-row"><input id="path" value={path} onChange={(event) => { setPath(event.target.value); setSelectedFiles([]); }} placeholder="C:\\Users\\YourName or \\server\\share" /><label className="secondary-button" htmlFor="folder-picker">Choose folder<input id="folder-picker" type="file" webkitdirectory="true" directory="true" multiple onChange={selectFolder} /></label><button type="submit">Prepare scan</button></div>
+        <div className="path-row"><input id="path" value={path} onChange={(event) => { setPath(event.target.value); setSelectedFiles([]); }} placeholder="C:\\Users\\YourName or \\server\\share" /><label className="secondary-button" htmlFor="folder-picker">Choose folder<input id="folder-picker" type="file" webkitdirectory="true" directory="true" multiple onChange={selectFolder} /></label><button type="submit" disabled={isScanning}>{isScanning ? 'Scanning...' : 'Prepare scan'}</button></div>
         <p className="status" role="status">{status}</p>
       </form>
       <section className="dashboard">

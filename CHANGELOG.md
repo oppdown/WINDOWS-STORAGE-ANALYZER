@@ -2,6 +2,15 @@
 
 All notable changes to WINDOWS STORAGE ANALYZER are documented here.
 
+## [0.1.4] - 2026-09-03
+
+### Fixed
+
+- Drive-only paths such as `D:` now normalize to the drive root before native scanning.
+- The Windows desktop build now prefers the native scan bridge when a path is entered, even if a browser folder selection is still present.
+- Large browser folder previews process in yielding batches with visible progress instead of appearing frozen.
+- The scan button now shows an active scanning state and prevents duplicate submissions.
+
 ## [0.1.3] - 2026-09-03
 
 ### Added
