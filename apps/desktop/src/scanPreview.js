@@ -86,5 +86,6 @@ export function summarizeRustScan(scan) {
       .filter((child) => child.kind === 'directory')
       .map((child) => [child.name, child.logicalBytes]),
     largestFiles: files.slice(0, 8),
+    tree: root,
   };
 }

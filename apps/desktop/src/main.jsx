@@ -18,6 +18,7 @@ function App() {
   const [result, setResult] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [activeNodePath, setActiveNodePath] = useState(null);
 
   function selectFolder(event) {
     const files = Array.from(event.target.files ?? []);
@@ -67,6 +68,7 @@ function App() {
       const scan = await invoke('scan_directory', { root: target });
       const scanned = summarizeRustScan(scan);
       setResult({ path: target, profile, ...scanned });
+      setActiveNodePath(null);
       setStatus(`Native scan complete: ${scanned.files.toLocaleString()} files.`);
     } catch (error) {
       setResult(null);
@@ -76,11 +78,20 @@ function App() {
     }
   }
 
+  const activeNode = result?.tree
+    ? findNodeByPath(result.tree, activeNodePath) ?? result.tree
+    : null;
+  const parentNode = activeNode && result?.tree
+    ? findParentNode(result.tree, activeNode.path)
+    : null;
+  const childNodes = activeNode?.children ?? [];
+  const visibleChildNodes = childNodes.slice(0, 250);
+
   return (
     <main className="shell">
       <header className="topbar">
         <div><span className="eyebrow">WINDOWS-FIRST STORAGE WORKSTATION</span><h1>Storage Analyzer</h1></div>
-        <span className="badge">PRE-ALPHA 0.1.4</span>
+        <span className="badge">PRE-ALPHA 0.1.5</span>
       </header>
       <section className="hero">
         <div><p className="eyebrow">LOCAL-FIRST • EXPLAINABLE • SAFE</p><h2>See what is using your space.</h2><p className="muted">Scan, understand, compare, and clean up storage with every total traceable to a file or folder.</p></div>
@@ -96,12 +107,37 @@ function App() {
         <p className="status" role="status">{status}</p>
       </form>
       <section className="dashboard">
-        <div className="panel chart"><div className="panel-title"><div><span className="eyebrow">02</span><h3>Space map</h3></div><span className="muted">Local scan</span></div>{result?.folders?.length ? <div className="folder-bars">{result.folders.map(([name, bytes]) => <div className="folder-row" key={name}><div><span>{name}</span><small>{formatBytes(bytes)}</small></div><div className="bar-track"><span style={{ width: `${Math.max(4, (bytes / Math.max(result.bytes, 1)) * 100)}%` }} /></div></div>)}</div> : <div className="empty-map"><span>Scan results will appear here</span><small>Select a folder for a local preview, or open the Windows desktop build for native path scanning.</small></div>}</div>
+        <div className="panel chart">
+          <div className="panel-title"><div><span className="eyebrow">02</span><h3>Space map</h3></div><span className="muted">Local scan</span></div>
+          {result?.folders?.length ? <>
+            <div className="folder-bars">{result.folders.map(([name, bytes]) => { const folder = result.tree?.children?.find((child) => child.kind === 'directory' && child.name === name); return <div className="folder-row" key={name}><div className="folder-row-label"><button type="button" className="tree-link" disabled={!folder} onClick={() => setActiveNodePath(String(folder.path))}>{name}</button><small>{formatBytes(bytes)}</small></div><div className="bar-track"><span style={{ width: `${Math.max(4, (bytes / Math.max(result.bytes, 1)) * 100)}%` }} /></div></div>; })}</div>
+            {activeNode ? <div className="tree-browser"><div className="tree-toolbar"><div><span className="eyebrow">Browse scan</span><strong title={String(activeNode.path)}>{String(activeNode.path)}</strong></div>{parentNode ? <button type="button" className="nav-button" onClick={() => setActiveNodePath(String(parentNode.path))}>Up one level</button> : null}</div><p className="tree-summary">{(activeNode.childCount ?? childNodes.length).toLocaleString()} items · {formatBytes(activeNode.logicalBytes)}</p><div className="tree-list">{visibleChildNodes.map((child) => child.kind === 'directory' ? <button type="button" className="tree-row tree-directory" key={String(child.path)} onClick={() => setActiveNodePath(String(child.path))}><span>▸ {child.name}</span><strong>{formatBytes(child.logicalBytes)}</strong></button> : <div className="tree-row tree-file" key={String(child.path)}><span title={String(child.path)}>{child.name}</span><strong>{formatBytes(child.logicalBytes)}</strong></div>)}</div>{childNodes.length > visibleChildNodes.length ? <small className="tree-limit">Showing the {visibleChildNodes.length.toLocaleString()} largest items of {childNodes.length.toLocaleString()} in this directory.</small> : null}</div> : null}
+          </> : <div className="empty-map"><span>Scan results will appear here</span><small>Select a folder for a local preview, or open the Windows desktop build for native path scanning.</small></div>}
+        </div>
         <div className="panel summary"><div className="panel-title"><div><span className="eyebrow">03</span><h3>Scan summary</h3></div></div>{result ? <><dl><dt>Target</dt><dd>{result.path}</dd><dt>Mode</dt><dd>{result.profile}</dd><dt>Files</dt><dd>{result.files == null ? 'Pending native bridge' : result.files.toLocaleString()}</dd><dt>Logical size</dt><dd>{result.bytes == null ? 'Pending native bridge' : formatBytes(result.bytes)}</dd></dl>{result.largestFiles?.length ? <div className="largest"><h4>Largest files</h4>{result.largestFiles.slice(0, 5).map((file) => <div className="largest-row" key={file.name}><span title={file.name}>{file.name}</span><strong>{formatBytes(file.bytes)}</strong></div>)}</div> : null}</> : <p className="muted">No scan prepared yet.</p>}</div>
       </section>
       <footer>Built for Windows • metadata remains local by default • destructive actions require confirmation</footer>
     </main>
   );
+}
+
+function findNodeByPath(node, path) {
+  if (!node || path == null) return null;
+  if (String(node.path) === String(path)) return node;
+  for (const child of node.children ?? []) {
+    const found = findNodeByPath(child, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParentNode(node, targetPath) {
+  for (const child of node?.children ?? []) {
+    if (String(child.path) === String(targetPath)) return node;
+    const parent = findParentNode(child, targetPath);
+    if (parent) return parent;
+  }
+  return null;
 }
 
 createRoot(document.getElementById('root')).render(<App />);

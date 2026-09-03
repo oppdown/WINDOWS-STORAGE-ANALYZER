@@ -23,6 +23,9 @@ test('desktop shell exposes a real folder selection path for local preview scans
   assert.match(source, /Local preview scan complete/);
   assert.match(source, /invoke\('scan_directory'/);
   assert.match(source, /normalizeWindowsPath/);
+  assert.match(source, /Browse scan/);
+  assert.match(source, /Up one level/);
+  assert.match(source, /findParentNode/);
 });
 
 test('preview summary totals files and sorts folders and largest files', () => {
@@ -42,6 +45,7 @@ test('native scan summary preserves root totals and ranks nested files', () => {
   const result = summarizeRustScan({
     files: 2,
     root: {
+      kind: 'directory',
       logicalBytes: 12,
       children: [
         { kind: 'directory', name: 'nested', logicalBytes: 7, children: [
@@ -55,6 +59,7 @@ test('native scan summary preserves root totals and ranks nested files', () => {
   assert.equal(result.bytes, 12);
   assert.deepEqual(result.folders, [['nested', 7]]);
   assert.equal(result.largestFiles[0].name, 'nested/two.bin');
+  assert.equal(result.tree.kind, 'directory');
 });
 
 test('Windows drive-only paths normalize to the drive root', () => {

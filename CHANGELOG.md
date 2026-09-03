@@ -2,6 +2,14 @@
 
 All notable changes to WINDOWS STORAGE ANALYZER are documented here.
 
+## [0.1.5] - 2026-09-03
+
+### Added
+
+- Clickable top-level space-map folders and a native scan browser for exploring nested directories.
+- Largest-child directory/file views with an Up one level control and current path display.
+- A 250-item largest-child cap to keep very large directories responsive while preserving useful investigation targets.
+
 ## [0.1.4] - 2026-09-03
 
 ### Fixed
